@@ -17,6 +17,68 @@ def preprocess_from_file(audio_file, lyrics_file, word_file=None):
 
     return y, words, lyrics_p, idx_word_p, idx_line_p
 
+
+def extract_phonemegram(audio, method="Baseline", cuda=True):
+    t = time()
+
+    # decode method
+    if "BDR" in method:
+        model_type = method[:-4]
+        bdr_flag = True
+    else:
+        model_type = method
+        bdr_flag = False
+    print("Model: {} BDR?: {}".format(model_type, bdr_flag))
+
+    # prepare acoustic model params
+    if model_type == "Baseline":
+        n_class = 41
+    elif model_type == "MTL":
+        n_class = (41, 47)
+    else:
+        ValueError("Invalid model type.")
+
+    hparams = {
+        "n_cnn_layers": 1,
+        "n_rnn_layers": 3,
+        "rnn_dim": 256,
+        "n_class": n_class,
+        "n_feats": 32,
+        "stride": 1,
+        "dropout": 0.1
+    }
+
+    device = 'cuda' if (cuda and torch.cuda.is_available()) else 'cpu'
+
+    ac_model = AcousticModel(
+        hparams['n_cnn_layers'], hparams['rnn_dim'], hparams['n_class'], \
+        hparams['n_feats'], hparams['stride'], hparams['dropout']
+    ).to(device)
+
+    print("Loading acoustic model from checkpoint...")
+    state = utils.load_model(ac_model, "./checkpoints/checkpoint_{}".format(model_type), cuda=(device=="gpu"))
+    ac_model.eval()
+
+    print("Computing phoneme posteriorgram...")
+
+    # reshape input, prepare mel
+    x = audio.reshape(1, 1, -1)
+    x = utils.move_data_to_device(x, device)
+    x = x.squeeze(0)
+    x = x.squeeze(1)
+    x = train_audio_transforms.to(device)(x)
+    x = nn.utils.rnn.pad_sequence(x, batch_first=True).unsqueeze(1)
+
+    # predict
+    all_outputs = ac_model(x)
+    if model_type == "MTL":
+        all_outputs = torch.sum(all_outputs, dim=3)
+
+    all_outputs = F.log_softmax(all_outputs, dim=2)
+
+    return all_outputs
+
+
 def align(audio, words, lyrics_p, idx_word_p, idx_line_p, method="Baseline", cuda=True):
 
     # start timer

@@ -11,4 +11,5 @@ torchaudio
 tensorboard
 sortedcontainers
 youtube_dl
-g2p_en
+g2p-en
+spleeter
