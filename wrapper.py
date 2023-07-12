@@ -74,7 +74,7 @@ def extract_phonemegram(audio, method="Baseline", cuda=True):
     if model_type == "MTL":
         all_outputs = torch.sum(all_outputs, dim=3)
 
-    all_outputs = F.log_softmax(all_outputs, dim=2)
+    all_outputs = F.softmax(all_outputs, dim=2)
 
     return all_outputs
 
@@ -141,7 +141,7 @@ def align(audio, words, lyrics_p, idx_word_p, idx_line_p, method="Baseline", cud
     if model_type == "MTL":
         all_outputs = torch.sum(all_outputs, dim=3)
 
-    all_outputs = F.log_softmax(all_outputs, dim=2)
+    all_outputs = F.softmax(all_outputs, dim=2)
 
     batch_num, output_length, num_classes = all_outputs.shape
     song_pred = all_outputs.data.cpu().numpy().reshape(-1, num_classes)  # total_length, num_classes
