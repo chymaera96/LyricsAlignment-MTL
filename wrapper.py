@@ -74,7 +74,7 @@ def extract_phonemegram(audio, method="Baseline", cuda=True):
     if model_type == "MTL":
         all_outputs = torch.sum(all_outputs, dim=3)
 
-    all_outputs = F.softmax(all_outputs, dim=2)
+    # all_outputs = F.softmax(all_outputs, dim=2)
 
     return all_outputs
 
